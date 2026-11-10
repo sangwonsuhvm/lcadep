@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lcadep"
+version = "0.1.0"
+description = "Default rules for dependence between uncertain inputs in Monte Carlo uncertainty analysis for life cycle assessment"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Sangwon Suh", email = "sangwon@tsinghua.edu.cn"}]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.22"]
+keywords = ["life cycle assessment", "uncertainty", "Monte Carlo", "correlation", "dependence", "industrial ecology"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+examples = ["matplotlib>=3.5"]
+test = ["pytest>=7"]
+
+[project.urls]
+Source = "https://github.com/sangwonsuhvm/lcadep"
+
+[tool.setuptools]
+packages = ["lcadep"]
+
+[tool.setuptools.package-data]
+lcadep = ["default_lambda.csv"]

@@ -1,0 +1,66 @@
+{
+ "source": "US EPA eGRID 2019-2023 and eGRID2024 (Cornerstone Sustainability Data Initiative 2026); sample rules of p2_pilot_egrid.py",
+ "plants": {
+  "Hamilton Patriot": {
+   "orispl": 58426,
+   "state": "PA",
+   "nameplate_MW": 870.0,
+   "heat_rate_btu_per_kwh_2024": 6662.374365898079,
+   "co2_g_per_kwh_2024": 359.1771899133361,
+   "own_sd_ln_heat_input_2019_2024": 0.006506266787335204,
+   "own_sd_ln_co2_2019_2024": 0.006502761619733864,
+   "years": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ]
+  },
+  "Hamilton Liberty": {
+   "orispl": 58420,
+   "state": "PA",
+   "nameplate_MW": 870.0,
+   "heat_rate_btu_per_kwh_2024": 6824.127906137488,
+   "co2_g_per_kwh_2024": 367.89748574339103,
+   "own_sd_ln_heat_input_2019_2024": 0.021958222657628753,
+   "own_sd_ln_co2_2019_2024": 0.021959790939648595,
+   "years": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ]
+  }
+ },
+ "pooled_within_plant_sd_ln": {
+  "heat_input": 0.04622645776165714,
+  "co2": 0.046475400686205266
+ },
+ "pooled_within_plant_n": {
+  "plant_years": 1939,
+  "plants": 364
+ },
+ "appalachian_production_co2": {
+  "g_per_mj_hhv": 0.2553400021544486,
+  "sd_ln_yearly": 0.15396574000606203,
+  "facilities": 68,
+  "facility_years": 349,
+  "years": [
+   2015,
+   2023
+  ],
+  "source": "US EPA GHGRP Subpart W, onshore petroleum and natural gas production, basins 160 and 160A (Appalachian), gas-dominated facilities; CO2 from combustion equipment and all other sources"
+ },
+ "pa_pairs_heat_rate_deviation_corr": {
+  "pairs": 153,
+  "plants": 18,
+  "mean": -0.014166247457579217,
+  "median": -0.020497676661909884,
+  "p10": -0.7470190506344535,
+  "p90": 0.7309782791332282
+ }
+}
