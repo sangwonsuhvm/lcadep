@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lcadep"
-version = "0.1.0"
+version = "0.2.0"
 description = "Default rules for dependence between uncertain inputs in Monte Carlo uncertainty analysis for life cycle assessment"
 readme = "README.md"
 license = {text = "MIT"}

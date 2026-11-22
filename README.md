@@ -2,13 +2,14 @@
 
 `lcadep` applies a three-tier default rule for dependence between uncertain inputs in Monte Carlo
 uncertainty analysis for life cycle assessment (LCA) and other industrial ecology models. It is a
-small Python package that needs only numpy. Its default values are in `lcadep/default_lambda.csv`.
+small Python package that needs only numpy. Its default values are in `lcadep/default_lambda.csv`,
+and `lcadep.fit` estimates such values from facility-level data.
 
 The rule and the values are described in an article in preparation by Sangwon Suh and co-authors
 (working title *Default rules for dependence between uncertain flows in industrial ecology:
 empirical defaults and an application to life cycle assessment*).
 
-Status: version 0.1.0, a research release that accompanies the manuscript. Check the values and
+Status: version 0.2.0, a research release that accompanies the manuscript. Check the values and
 the code before using them in published work, and report problems as GitHub issues.
 
 ## Install
@@ -99,6 +100,76 @@ global warming impact of electricity from two gas-fired plants that burn the sam
   - the flagged pairs and how each was treated;
   - the bounding results.
 
+## Fitting λ from your own data
+
+`lcadep.fit` estimates λ and its sign by the steps used for the default table, so that data for
+other sectors, such as farm-level data, go through the same steps as the power plants.
+
+**What you need.** A table with one row per facility-year:
+- a column that identifies the facility (plant, farm, site);
+- optionally a column with the data year;
+- one column per exchange, each **per unit of output** (per MWh, per kg of milk). Values must be
+  positive, because the fit works on logarithms. Rows with a missing or non-positive value are
+  left out and counted.
+
+At least three exchanges are needed: with two, only the product λ₁λ₂ is identified. The between
+fit needs at least 20 facilities, and the within fit at least 20 facilities with three or more
+rows (years) each. With one row per facility, only the pooled fit is made.
+
+**From the command line.**
+
+```bash
+python -m lcadep.fit farms.csv --facility farm_id --year year --exchanges feed_input ch4 n2o nh3 \
+    --sector "Agriculture" --technology "Dairy farm" --region NL --source "your data source" --out rows.csv
+```
+
+This prints λ, its 90% interval and its sign for each exchange, the largest residual correlation
+and a hold-out test, and writes `rows.csv` in the layout of `default_lambda.csv`.
+
+**From Python.**
+
+```python
+import numpy as np
+from lcadep import fit
+
+x, facility, years = fit.read_table("farms.csv", "farm_id", ["feed_input", "ch4", "n2o", "nh3"], year="year")
+res = fit.fit_lambda(x, facility, ["feed_input", "ch4", "n2o", "nh3"], seed=1)
+print(res.summary())
+check = fit.holdout(x, facility, seed=1)
+rows = fit.table_rows(res, "Agriculture", "Dairy farm", "NL", "2019-2023", "your data source")
+```
+
+`fit_lambda` also takes numpy arrays directly, so the data can come from pandas or any other tool.
+
+**What the fit does.**
+
+| Step | What happens | Where |
+| --- | --- | --- |
+| 1 | Logarithms of each exchange per unit of output | `fit_lambda` |
+| 2 | Normal scores of each column, which corresponds to a Gaussian copula | `normal_scores` |
+| 3 | One-factor model fitted to the correlation matrix of the scores by minimum residuals; λ is the squared loading and the sign is that of the loading | `one_factor` |
+| 4 | The same fit for the normal scores of facility means (`between`), and a one-factor fit to the correlation of the log deviations from facility means (`within`) | `fit_lambda` |
+| 5 | 90% intervals of the pooled λ from a bootstrap over facilities (300 replicates by default) | `fit_lambda` |
+| 6 | Hold-out test: fit on a random half of the facilities, compare the implied correlations with those observed in the other half, against independence (200 splits by default) | `holdout` |
+
+**How to read the result.**
+- A large residual correlation means that one common driver does not describe a pair. In the
+  power plants this happened for SO₂ and NOx from coal, which share emission controls. Treat such
+  a pair under Tier 3, or report it.
+- A loading at the bound (λ = 0.998) signals an exchange that is nearly a function of the common
+  driver. The other loadings are then not re-optimized. Check whether it is computed from another exchange; if so, it belongs under Tier 1.
+- Exchanges that a reporting rule or an emission factor computes from another exchange also
+  belong under Tier 1. Leave them out of the fit.
+- A wide interval means that λ is poorly determined. This happens with few facilities and when
+  the exchanges are nearly independent, where a one-factor fit can assign a large λ to one
+  exchange by chance. Do not use such values as defaults.
+- The sign is relative: only the product of two signs matters.
+
+`examples/fit_simulated_facilities.py` runs all of this on simulated data with known λ.
+
+With the same data and seeds, `lcadep.fit` returns the power-plant values of the default table
+(pooled, between and within λ, intervals and hold-out errors) to within 10⁻¹⁴.
+
 ## Files
 
 | File | Content |
@@ -107,7 +178,10 @@ global warming impact of electricity from two gas-fired plants that burn the sam
 | `lcadep/default_lambda.csv` | The versioned default table. It holds λ, 90% intervals (pooled fits), signs and sample sizes for two sets of facilities: US fossil power plants (eGRID 2019–2024) and US onshore oil and gas production (GHGRP Subpart W, 2015–2023) |
 | `examples/worked_case_ngcc.py` | The worked case of the article. It writes the step log, the results tables and the figure |
 | `examples/worked_case_inputs.json` | Plant data and within-plant spreads, derived from eGRID |
+| `lcadep/fit.py` | Estimation of λ and its sign from facility-level data, the hold-out test and the command line |
+| `examples/fit_simulated_facilities.py` | The fit applied to simulated data with known λ |
 | `tests/test_lcadep.py` | Tests of validity, marginals, sample-once behaviour and the screen |
+| `tests/test_fit.py` | Tests of the fit: recovery of known λ and signs, between and within fits, the hold-out test and the table layout |
 | `tools/build_default_table.py` | Rebuilds the default table from the pilot results of the article (inputs not included) |
 
 ## Run
@@ -115,6 +189,7 @@ global warming impact of electricity from two gas-fired plants that burn the sam
 ```bash
 python -m pytest
 python examples/worked_case_ngcc.py worked_case_out/
+python examples/fit_simulated_facilities.py fit_example_out/
 ```
 
 The figure of the worked case needs matplotlib.
@@ -130,8 +205,8 @@ Values for further sectors and regions are welcome. Each row of the table states
 - the number of facilities and facility-years;
 - the source.
 
-Please open an issue that describes the data and the estimation (a one-factor model on normal scores of
-the log coefficients per unit of output, with a bootstrap over facilities) before submitting a pull request.
+Estimate the values with `lcadep.fit` (see 'Fitting λ from your own data'), which writes rows in this
+layout. Please open an issue that describes the data before submitting a pull request.
 
 ## Licence and citation
 

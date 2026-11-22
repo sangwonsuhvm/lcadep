@@ -18,6 +18,8 @@ preparation (Suh and co-authors; see README.md):
   Tier 3  screening and bounds
           screen_pairs     first-order screen of input pairs (Eq. 4)
           first_order_sd   first-order standard deviation for a given correlation matrix
+  Fitting lcadep.fit       estimate lambda and its sign from facility-level data, by the steps
+                           used for the default table (fit_lambda, holdout, table_rows)
 
 Only numpy is required. The worked example in examples/worked_case_ngcc.py applies every step.
 """
@@ -32,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 DEFAULTS_CSV = Path(__file__).with_name("default_lambda.csv")
 
 
@@ -95,20 +97,21 @@ def tier2_correlation(lam, sign=None) -> np.ndarray:
     """Correlation matrix implied by shared-variance fractions lam and signs: l l' + diag(1 - lam).
 
     It is positive semidefinite for any lam in [0, 1], because it is a rank-one matrix plus a
-    non-negative diagonal; rho_ij = s_i s_j sqrt(lam_i lam_j) off the diagonal.
+    non-negative diagonal; rho_ij = delta_i delta_j sqrt(lam_i lam_j) off the diagonal, with
+    delta_i the sign of exchange i.
     """
     lam = np.asarray(lam, float)
     if np.any((lam < 0) | (lam > 1)):
         raise ValueError("lambda must lie in [0, 1]")
-    s = np.ones_like(lam) if sign is None else np.sign(np.asarray(sign, float))
-    load = s * np.sqrt(lam)
+    delta = np.ones_like(lam) if sign is None else np.sign(np.asarray(sign, float))
+    load = delta * np.sqrt(lam)
     R = np.outer(load, load)
     np.fill_diagonal(R, 1.0)
     return R
 
 
 def tier2_normals(draws: Draws, process: str, lam: dict, sign: dict | None = None) -> dict:
-    """Correlated standard normals z_i = s_i sqrt(lam_i) eta + sqrt(1 - lam_i) xi_i for one process.
+    """Correlated standard normals z_i = delta_i sqrt(lam_i) eta + sqrt(1 - lam_i) xi_i for one process.
 
     eta, the common driver, is drawn once per process (key (process, 'common driver')); xi_i is
     each exchange's own variation (key (process, exchange)). Every z_i is standard normal, so the
@@ -119,8 +122,8 @@ def tier2_normals(draws: Draws, process: str, lam: dict, sign: dict | None = Non
     for ex, val in lam.items():
         if not 0 <= val <= 1:
             raise ValueError(f"lambda of {ex} must lie in [0, 1]")
-        s = 1.0 if sign is None else float(np.sign(sign.get(ex, 1.0)) or 1.0)
-        out[ex] = s * math.sqrt(val) * eta + math.sqrt(1 - val) * draws.normal((process, ex))
+        delta = 1.0 if sign is None else float(np.sign(sign.get(ex, 1.0)) or 1.0)
+        out[ex] = delta * math.sqrt(val) * eta + math.sqrt(1 - val) * draws.normal((process, ex))
     return out
 
 
@@ -179,9 +182,9 @@ def screen_pairs(a, sigma, names, threshold: float = 0.05, keep: float | None = 
             deterministic point; for h > 0, a_i = e_i h with e_i the relative sensitivity
             coefficient. For a comparison, use the sensitivities of the difference.
     sigma   log-scale standard deviation of each input.
-    keep    None (default): keep every input i with 2 sqrt(s_i s_max) >= threshold, where s_i is its
-            share of the first-order variance and s_max the largest share. Because
-            w_ij = 2 sqrt(s_i s_j), no pair outside the kept set can reach the threshold.
+    keep    None (default): keep every input i with 2 sqrt(phi_i phi_max) >= threshold, where phi_i is
+            its share of the first-order variance and phi_max the largest share. Because
+            w_ij = 2 sqrt(phi_i phi_j), no pair outside the kept set can reach the threshold.
             A number instead keeps inputs, largest first, until they explain that share of the
             first-order variance; this cheaper rule can miss a pair of a large and a small input.
     covered pairs (i, j) already handled by Tier 1 or Tier 2.
@@ -194,9 +197,9 @@ def screen_pairs(a, sigma, names, threshold: float = 0.05, keep: float | None = 
     sigma = np.asarray(sigma, float)
     v = (a * sigma) ** 2
     total = v.sum()
-    s = v / total
+    phi = v / total
     if keep is None:
-        kept = sorted(np.nonzero(2 * np.sqrt(s * s.max()) >= threshold)[0].tolist())
+        kept = sorted(np.nonzero(2 * np.sqrt(phi * phi.max()) >= threshold)[0].tolist())
     else:
         order = np.argsort(-v)
         n_keep = int(np.searchsorted(np.cumsum(v[order]) / total, keep - 1e-12) + 1)
