@@ -14,3 +14,4 @@ jobs:
       - run: pip install .[test]
       - run: python -m pytest -q
       - run: python examples/worked_case_ngcc.py /tmp/worked_case_out
+      - run: python examples/fit_simulated_facilities.py /tmp/fit_example_out

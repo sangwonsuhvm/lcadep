@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use lcadep or its default table, please cite the software and the accompanying article (in preparation)."
 title: "lcadep: default dependence rules for Monte Carlo uncertainty analysis in life cycle assessment"
-version: 0.1.0
-date-released: 2026-11-09
+version: 0.2.0
+date-released: 2026-11-22
 license: MIT
 repository-code: "https://github.com/sangwonsuhvm/lcadep"
 authors:
